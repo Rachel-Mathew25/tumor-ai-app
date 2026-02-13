@@ -1,74 +1,76 @@
 # hey python bring me my tools!
-from sklearn.datasets import load_breast_cancer  # gives us a real medical dataset
-from sklearn.model_selection import train_test_split  # splits data into practice + exam
-from sklearn.linear_model import LogisticRegression  # the ML BRAIN
-from sklearn.metrics import accuracy_score  # checks how smart it is
-from sklearn.metrics import confusion_matrix  # shows where it messed up
-from sklearn.metrics import classification_report  # detailed performance breakdown
-import joblib  # lets us freeze and save the trained brain
+
+from sklearn.datasets import load_breast_cancer   # gives us real medical dataset
+from sklearn.model_selection import train_test_split   # splits data into practice + exam
+from sklearn.linear_model import LogisticRegression   # the ML BRAIN
+from sklearn.metrics import accuracy_score   # checks how smart it is
+from sklearn.metrics import confusion_matrix   # shows where it messed up
+from sklearn.pipeline import Pipeline   # automatic machine that runs steps in order
+from sklearn.preprocessing import StandardScaler   # scales numbers so model understands better
 
 
-# load the real dataset
-# this dataset contains information about tumors
-# the goal is to predict if a tumor is malignant (dangerous) or benign (safe)
+# load real dataset
+# contains tumor measurements
+# goal → predict if tumor is malignant or benign
 data = load_breast_cancer()
 
+
 # features (clues)
-# these are numerical measurements of the tumor (like size, texture, smoothness etc.)
-# X is basically all the input columns
-X = data.data  
+# these are measurements like radius, texture, smoothness etc.
+# X = input information
+X = data.data
+
 
 # target (answers)
-# 0 = malignant
-# 1 = benign
-# Y is what we want the model to predict
-Y = data.target  
+# 0 = malignant (dangerous)
+# 1 = benign (safe)
+# Y = what model must predict
+Y = data.target
 
 
-# Split into training and testing
-# 70% is the training set (learning)
-# 30% (0.3) is the testing set (exam)
-# 42 means use the same random shuffle every time so results don’t randomly change
-# train_test_split basically takes your data -> shuffle it -> break into 2 parts
+# split data into training + testing
+# 70% learning material
+# 30% exam paper
+# 42 = same shuffle every time so results stay consistent
 X_train, X_test, y_train, y_test = train_test_split(
     X, Y, test_size=0.3, random_state=42
 )
 
 
-# create the model (THE BRAIN)
-# logistic regression draws a smart boundary between malignant and benign
-# internally it uses a sigmoid function
-# probability > 0.5 → class 1
-# probability < 0.5 → class 0
-# max_iter=5000 means "keep adjusting weights up to 5000 times if needed"
-model = LogisticRegression(max_iter=5000)
+# create pipeline (SMART MACHINE)
+# pipeline = steps connected in order
+# step1 → scaler (normalizes numbers)
+# step2 → model (learns patterns)
+pipeline = Pipeline([
+    ("scaler", StandardScaler()),   # makes values comparable
+    ("model", LogisticRegression(max_iter=5000))   # brain that learns
+])
 
 
-# Train model
-# this is where the model learns by adjusting weights (gradient descent happening behind the scenes)
-# it studies patterns between tumor measurements and final diagnosis
-model.fit(X_train, y_train)
+# train pipeline
+# internally this does:
+# scale training data → then train model
+pipeline.fit(X_train, y_train)
 
 
-# make prediction
-# now we give it the test data (which it has NEVER seen before)
-# it must decide 0 or 1 based on learned patterns
-predictions = model.predict(X_test)
+# make predictions
+# pipeline automatically:
+# scales test data → sends to model → gives prediction
+predictions = pipeline.predict(X_test)
 
 
 # check accuracy
-# accuracy = (correct predictions) / (total predictions)
-# if accuracy = 0.95 → it means 95% correct on unseen data
+# accuracy = correct predictions / total predictions
 accuracy = accuracy_score(y_test, predictions)
 
 
 # confusion matrix
+# shows exactly where model was right and wrong
 # helps detect:
 # true positives
 # true negatives
 # false positives
 # false negatives
-# VERY important in medical systems because wrong prediction can be serious
 cm = confusion_matrix(y_test, predictions)
 
 
@@ -78,12 +80,11 @@ print("Accuracy:", accuracy)
 print("Confusion Matrix:")
 print(cm)
 
-print("\nDetailed Report:")
-print(classification_report(y_test, predictions))
+# save trained pipeline to file
+# joblib is used to store trained ML models
+import joblib
 
+joblib.dump(pipeline, "model.pkl")
 
-# save the trained brain so we don’t retrain every time
-# this creates a file: breast_cancer_model.pkl
-joblib.dump(model, "breast_cancer_model.pkl")
+print("Model saved successfully!")
 
-print("\nModel trained and saved successfully.")

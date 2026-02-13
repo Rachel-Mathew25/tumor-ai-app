@@ -1,154 +1,127 @@
-# hey python bring me my shiny GUI tools
-import customtkinter as ctk  # modern looking tkinter
-import joblib  # to load our frozen trained brain
-import numpy as np  # for reshaping input properly
+# hey python bring me my tools!
+
+import tkinter as tk   # creates window + buttons + inputs
+import joblib   # loads saved ML brain
 
 
-# load the trained brain we saved earlier
-model = joblib.load("breast_cancer_model.pkl")
+# load trained model
+# this loads the already trained pipeline from file
+# meaning we DON'T train again (fast + professional way)
+model = joblib.load("model.pkl")
 
 
-# dark mode because we are professionals
-ctk.set_appearance_mode("dark")
-ctk.set_default_color_theme("blue")
+# create window
+# this is the main app window users see
+window = tk.Tk()
+window.title("Tumor Predictor AI")
+window.geometry("500x650")
 
 
-# create main window
-app = ctk.CTk()
-app.title("Breast Cancer Prediction System")
-app.geometry("600x500")
+# heading
+# big title text at top
+title = tk.Label(window, text="Tumor Prediction System", font=("Arial", 18))
+title.pack(pady=10)
 
 
-# title
-title_label = ctk.CTkLabel(
-    app,
-    text="Breast Cancer Prediction System",
-    font=("Arial", 22)
-)
-title_label.pack(pady=20)
+# labels for inputs
+# these are tumor measurement names
+labels = [
+    "Mean Radius",
+    "Mean Texture",
+    "Mean Perimeter",
+    "Mean Area",
+    "Mean Smoothness"
+]
+
+entries = []   # will store input boxes
 
 
-# input box (expects 30 values)
-input_entry = ctk.CTkEntry(
-    app,
-    width=500,
-    placeholder_text="Enter 30 comma-separated values"
-)
-input_entry.pack(pady=15)
+# create input boxes dynamically
+# loop creates label + textbox for each feature
+for text in labels:
+    label = tk.Label(window, text=text)
+    label.pack()
+
+    entry = tk.Entry(window)
+    entry.pack()
+
+    entries.append(entry)
 
 
-# result label
-result_label = ctk.CTkLabel(app, text="", font=("Arial", 16))
-result_label.pack(pady=10)
+# result text label
+# this will display prediction result
+result_label = tk.Label(window, text="", font=("Arial", 14))
+result_label.pack(pady=20)
 
 
-# explanation box (multi-line text)
-explanation_label = ctk.CTkLabel(
-    app,
-    text="",
-    wraplength=550,
-    justify="left"
-)
-explanation_label.pack(pady=10)
+# explanation label
+# gives user friendly explanation
+explain_label = tk.Label(window, text="", wraplength=400, font=("Arial", 11))
+explain_label.pack(pady=10)
 
 
-# store last probability globally
-last_probability = None
-last_prediction = None
-
-
-# predict function
+# prediction function
+# runs when user presses button
 def predict():
-    global last_probability, last_prediction
 
-    try:
-        user_input = input_entry.get()
-        values = [float(x) for x in user_input.split(",")]
+    # get user input from textboxes
+    # convert text → float numbers
+    values = [float(e.get()) for e in entries]
 
-        if len(values) != 30:
-            result_label.configure(text="Please enter exactly 30 values.")
-            return
+    # model expects 2D list format
+    # so we wrap values inside []
+    prediction = model.predict([values])
 
-        input_array = np.array(values).reshape(1, -1)
+    # probability scores
+    # tells how confident model is
+    probability = model.predict_proba([values])
 
-        # prediction
-        prediction = model.predict(input_array)
-        probability = model.predict_proba(input_array)
-
-        last_probability = probability
-        last_prediction = prediction
-
-        if prediction[0] == 1:
-            result_label.configure(text="Prediction: BENIGN 🟢")
-        else:
-            result_label.configure(text="Prediction: MALIGNANT 🔴")
-
-        explanation_label.configure(text="")  # clear old explanation
-
-    except:
-        result_label.configure(text="Invalid input. Please enter proper numbers.")
-        explanation_label.configure(text="")
+    # probability of malignant (class 0)
+    risk = probability[0][0]
 
 
-# insight function
-def explain():
-    if last_prediction is None:
-        explanation_label.configure(
-            text="Please make a prediction first."
+    # logic for result display
+    if prediction[0] == 0:
+
+        result = "Malignant ⚠"
+        color = "red"
+
+        explanation = (
+            "The measurements match patterns seen in risky tumors.\n"
+            "This does NOT mean you have cancer.\n"
+            "Please consult a medical professional for proper diagnosis."
         )
-        return
 
-    malignant_prob = round(last_probability[0][0] * 100, 2)
-    benign_prob = round(last_probability[0][1] * 100, 2)
-
-    if last_prediction[0] == 0:
-        explanation_text = (
-            f"The model noticed patterns that are more commonly associated "
-            f"with malignant tumors.\n\n"
-            f"Confidence level:\n"
-            f"Malignant: {malignant_prob}%\n"
-            f"Benign: {benign_prob}%\n\n"
-            f"This does NOT mean a confirmed diagnosis. "
-            f"It simply means the measurements resemble patterns "
-            f"that often require further medical evaluation.\n\n"
-            f"Recommendation:\n"
-            f"It would be wise to consult a medical professional "
-            f"for proper clinical testing and reassurance."
-        )
     else:
-        explanation_text = (
-            f"The model noticed patterns that are more commonly associated "
-            f"with benign (non-dangerous) tumors.\n\n"
-            f"Confidence level:\n"
-            f"Benign: {benign_prob}%\n"
-            f"Malignant: {malignant_prob}%\n\n"
-            f"This suggests the measurements look similar to cases "
-            f"that were non-cancerous in the training data.\n\n"
-            f"Recommendation:\n"
-            f"Regular checkups are always a good practice, "
-            f"but this result appears reassuring."
+
+        result = "Benign ✅"
+        color = "green"
+
+        explanation = (
+            "The measurements match patterns seen in non-dangerous tumors.\n"
+            "This is a good sign, but always confirm with a doctor."
         )
 
-    explanation_label.configure(text=explanation_text)
+
+    # show result text
+    # also show probability score
+    result_label.config(
+        text=f"{result}\nRisk Score: {risk:.2f}",
+        fg=color
+    )
+
+
+    # show explanation message
+    explain_label.config(text=explanation)
+
 
 
 # predict button
-predict_button = ctk.CTkButton(
-    app,
-    text="Predict",
-    command=predict
-)
-predict_button.pack(pady=10)
+# when clicked → calls predict()
+btn = tk.Button(window, text="Predict", command=predict)
+btn.pack(pady=20)
 
 
-# explanation button
-explain_button = ctk.CTkButton(
-    app,
-    text="Why this result?",
-    command=explain
-)
-explain_button.pack(pady=10)
-
-
-# run app
-app.mainloop()
+# run window loop
+# keeps window alive until user closes it
+window.mainloop()
