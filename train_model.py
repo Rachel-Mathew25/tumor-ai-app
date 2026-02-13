@@ -1,90 +1,55 @@
-# hey python bring me my tools!
-
-from sklearn.datasets import load_breast_cancer   # gives us real medical dataset
-from sklearn.model_selection import train_test_split   # splits data into practice + exam
-from sklearn.linear_model import LogisticRegression   # the ML BRAIN
-from sklearn.metrics import accuracy_score   # checks how smart it is
-from sklearn.metrics import confusion_matrix   # shows where it messed up
-from sklearn.pipeline import Pipeline   # automatic machine that runs steps in order
-from sklearn.preprocessing import StandardScaler   # scales numbers so model understands better
+# hey python bring me my tools 😌
+from sklearn.datasets import load_breast_cancer   # gives us real tumor data
+from sklearn.pipeline import Pipeline   # lets us build a smart processing machine
+from sklearn.preprocessing import StandardScaler   # fixes number scale drama
+from sklearn.linear_model import LogisticRegression   # the prediction brain 🧠
+import pickle   # used to store our trained genius safely
 
 
-# load real dataset
-# contains tumor measurements
-# goal → predict if tumor is malignant or benign
+# ok python go fetch medical dataset
+# this dataset contains measurements of tumors
+# our mission → predict if tumor is dangerous or safe
 data = load_breast_cancer()
 
 
-# features (clues)
-# these are measurements like radius, texture, smoothness etc.
-# X = input information
-X = data.data
+# choosing features
+# frontend only sends 5 numbers
+# so model MUST learn from same 5 numbers
+# otherwise model will throw tantrum and crash
+X = data.data[:, [0,1,2,3,4]]
 
 
-# target (answers)
-# 0 = malignant (dangerous)
-# 1 = benign (safe)
-# Y = what model must predict
-Y = data.target
+# answers column
+# 0 = malignant (danger 😬)
+# 1 = benign (safe 😌)
+y = data.target
 
 
-# split data into training + testing
-# 70% learning material
-# 30% exam paper
-# 42 = same shuffle every time so results stay consistent
-X_train, X_test, y_train, y_test = train_test_split(
-    X, Y, test_size=0.3, random_state=42
-)
+# building smart pipeline machine
+# input goes in → scaler fixes values → brain predicts
+model = Pipeline([
 
+    # scaler makes sure all numbers are balanced
+    # because area can be 600
+    # while smoothness is like 0.09
+    # without scaling big numbers bully small ones
+    ("scaler", StandardScaler()),
 
-# create pipeline (SMART MACHINE)
-# pipeline = steps connected in order
-# step1 → scaler (normalizes numbers)
-# step2 → model (learns patterns)
-pipeline = Pipeline([
-    ("scaler", StandardScaler()),   # makes values comparable
-    ("model", LogisticRegression(max_iter=5000))   # brain that learns
+    # logistic regression = decision maker
+    # draws smart boundary between benign and malignant
+    ("brain", LogisticRegression(max_iter=5000))
 ])
 
 
-# train pipeline
-# internally this does:
-# scale training data → then train model
-pipeline.fit(X_train, y_train)
+# training time 😤📚
+# model studies patterns between tumor measurements and diagnosis
+model.fit(X, y)
 
 
-# make predictions
-# pipeline automatically:
-# scales test data → sends to model → gives prediction
-predictions = pipeline.predict(X_test)
+# save the trained brain
+# so we don't retrain every time app runs
+pickle.dump(model, open("model.pkl", "wb"))
 
 
-# check accuracy
-# accuracy = correct predictions / total predictions
-accuracy = accuracy_score(y_test, predictions)
-
-
-# confusion matrix
-# shows exactly where model was right and wrong
-# helps detect:
-# true positives
-# true negatives
-# false positives
-# false negatives
-cm = confusion_matrix(y_test, predictions)
-
-
-# print results
-print("Predictions:", predictions)
-print("Accuracy:", accuracy)
-print("Confusion Matrix:")
-print(cm)
-
-# save trained pipeline to file
-# joblib is used to store trained ML models
-import joblib
-
-joblib.dump(pipeline, "model.pkl")
-
-print("Model saved successfully!")
-
+# dramatic success message 😎
+print("model trained successfully — brain saved as model.pkl")
