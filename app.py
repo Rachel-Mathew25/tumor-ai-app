@@ -1,169 +1,226 @@
 # hey python bring me my tools
-import customtkinter as ctk   # modern looking GUI
-import pickle                 # loads trained brain
-import numpy as np            # handles numbers
-import matplotlib.pyplot as plt   # draws graph
+
+# streamlit -> turns our Python script into a web app UI
+import streamlit as st
+
+# pickle -> loads our trained ML model from file
+import pickle
+
+# numpy -> helps handle numerical arrays for prediction
+import numpy as np
+
+# matplotlib -> used to draw prediction history graph
+import matplotlib.pyplot as plt
+
+# reportlab -> used to generate downloadable PDF report
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, ListItem, ListFlowable
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import getSampleStyleSheet
 
+# io -> lets us create in-memory files (needed for Streamlit downloads)
+import io
+
 
 # load trained brain
 # this brain already studied tumor patterns earlier
+# we saved it earlier using pickle during model training
 model = pickle.load(open("model.pkl","rb"))
 
 
-# app window
-app = ctk.CTk()
-app.title("AI Tumor Diagnosis System")
-app.geometry("700x900")
-
-
-# scrollable area so UI never cuts off
-container = ctk.CTkScrollableFrame(app,width=650,height=850)
-container.pack(pady=10)
-
-
-# title
-title = ctk.CTkLabel(container,text="AI Tumor Diagnosis System",font=("Arial",28,"bold"))
-title.pack(pady=20)
+# app title
+# this shows at the top of the web app
+st.title("AI Tumor Diagnosis System")
 
 
 # input boxes
 # these are tumor measurements user enters
-labels = ["Mean Radius","Mean Texture","Mean Perimeter","Mean Area","Mean Smoothness"]
-entries = []
+labels = [
+    "Mean Radius",
+    "Mean Texture",
+    "Mean Perimeter",
+    "Mean Area",
+    "Mean Smoothness"
+]
 
+# we collect all user inputs into this list
+values = []
+
+# create a number input for each feature
 for label in labels:
-    ctk.CTkLabel(container,text=label,font=("Arial",16)).pack(pady=5)
-    entry = ctk.CTkEntry(container,width=300,height=35)
-    entry.pack(pady=5)
-    entries.append(entry)
+    val = st.number_input(label, value=0.0)
+    values.append(val)
 
 
-# result text
-result_label = ctk.CTkLabel(container,text="",font=("Arial",18))
-result_label.pack(pady=15)
+# result text placeholder
+# empty container that we update after prediction
+result_placeholder = st.empty()
 
 
 # confidence bar
-confidence_label = ctk.CTkLabel(container,text="Confidence",font=("Arial",16))
-confidence_label.pack()
-
-confidence_bar = ctk.CTkProgressBar(container,width=400)
-confidence_bar.pack(pady=10)
-confidence_bar.set(0)
+# shows how confident the model is
+st.write("Confidence")
+confidence_bar = st.progress(0)
 
 
 # explanation box
-explain_box = ctk.CTkTextbox(container,width=500,height=120)
-explain_box.pack(pady=15)
+# shows human-readable explanation of prediction
+explain_placeholder = st.empty()
 
 
-# history list
-history = []
+# history list stored in session
+# session_state keeps data while user interacts with app
+if "history" not in st.session_state:
+    st.session_state.history = []
+
+# stores last prediction text (needed for PDF)
+if "last_text" not in st.session_state:
+    st.session_state.last_text = ""
+
+# stores last explanation (needed for PDF)
+if "last_explain" not in st.session_state:
+    st.session_state.last_explain = ""
 
 
 # prediction function
+# runs when user clicks Predict button
 def predict():
 
     try:
-        # get numbers from entry boxes
-        values = [float(e.get()) for e in entries]
-        values = np.array(values).reshape(1,-1)
+        # convert user inputs into numpy array shape expected by model
+        arr = np.array(values).reshape(1,-1)
 
-        # predict class
-        pred = model.predict(values)[0]
+        # model predicts class (0 or 1)
+        pred = model.predict(arr)[0]
 
-        # probability confidence
-        prob = model.predict_proba(values)[0]
-        confidence = max(prob)
+        # model gives probability for confidence
+        prob = model.predict_proba(arr)[0]
+        confidence = float(max(prob))
 
-        # show result text
+        # convert numeric prediction into human label
         if pred == 1:
             result = "BENIGN"
-            color="lightgreen"
+            color = "green"
         else:
             result = "MALIGNANT"
-            color="red"
+            color = "red"
 
-        result_label.configure(text=f"Prediction: {result}   Confidence: {confidence*100:.2f}%",text_color=color)
+        # show prediction result nicely formatted
+        text = f"Prediction: {result}   Confidence: {confidence*100:.2f}%"
+        result_placeholder.markdown(
+            f"<h3 style='color:{color}'>{text}</h3>",
+            unsafe_allow_html=True
+        )
 
-        # update bar
-        confidence_bar.set(confidence)
+        # update confidence progress bar
+        confidence_bar.progress(confidence)
 
-        # explanation text
-        explain_box.delete("1.0","end")
-        explain_box.insert("end","Prediction explanation\n\n")
+        # build explanation text
+        explanation_text = "Prediction explanation\n\n"
 
-        for i,v in enumerate(values[0]):
-            explain_box.insert("end",f"{labels[i]} influenced decision\n")
+        # simple feature influence explanation
+        for i,v in enumerate(arr[0]):
+            explanation_text += f"{labels[i]} influenced decision\n"
 
-        explain_box.insert("end","\nSuggestion:\nConsult a medical professional for confirmation.")
+        explanation_text += "\nSuggestion:\nConsult a medical professional for confirmation."
 
-        # save history
-        history.append((result,confidence))
+        # display explanation
+        explain_placeholder.text(explanation_text)
+
+        # save for PDF + history
+        st.session_state.last_text = text
+        st.session_state.last_explain = explanation_text
+        st.session_state.history.append((result,confidence))
 
     except:
-        result_label.configure(text="Enter valid numbers",text_color="orange")
-
+        # if user enters invalid data
+        result_placeholder.markdown(
+            "<h3 style='color:orange'>Enter valid numbers</h3>",
+            unsafe_allow_html=True
+        )
 
 
 # graph function
+# shows how predictions changed over time
 def show_graph():
 
-    if len(history)==0:
+    # if no predictions yet
+    if len(st.session_state.history) == 0:
+        st.warning("No history yet")
         return
 
-    results=[1 if r[0]=="BENIGN" else 0 for r in history]
+    # convert BENIGN/MALIGNANT into numeric for plotting
+    results = [1 if r[0]=="BENIGN" else 0 for r in st.session_state.history]
 
-    plt.plot(results,marker="o")
+    # create matplotlib figure
+    fig = plt.figure()
+    plt.plot(results, marker="o")
     plt.title("Prediction History")
     plt.xlabel("Prediction Number")
     plt.ylabel("Result (1 benign 0 malignant)")
-    plt.show()
 
+    # display graph inside Streamlit
+    st.pyplot(fig)
 
 
 # pdf export function
+# generates downloadable medical report
 def save_pdf():
 
-    doc = SimpleDocTemplate("report.pdf",pagesize=letter)
+    # create in-memory file buffer
+    buffer = io.BytesIO()
+
+    doc = SimpleDocTemplate(buffer, pagesize=letter)
     styles = getSampleStyleSheet()
-    elements=[]
+    elements = []
 
-    elements.append(Paragraph("Tumor Diagnosis Report",styles["Title"]))
+    # report title
+    elements.append(Paragraph("Tumor Diagnosis Report", styles["Title"]))
     elements.append(Spacer(1,12))
 
-    elements.append(Paragraph(result_label.cget("text"),styles["Heading2"]))
+    # latest prediction
+    elements.append(Paragraph(st.session_state.last_text, styles["Heading2"]))
     elements.append(Spacer(1,12))
 
-    text = explain_box.get("1.0","end")
-    for line in text.split("\n"):
-        elements.append(Paragraph(line,styles["Normal"]))
+    # explanation text
+    for line in st.session_state.last_explain.split("\n"):
+        elements.append(Paragraph(line, styles["Normal"]))
 
     elements.append(Spacer(1,12))
 
-    elements.append(Paragraph("Prediction History",styles["Heading2"]))
-    list_items = [ListItem(Paragraph(f"{i+1}. {r[0]} ({r[1]*100:.2f}%)",styles["Normal"])) for i,r in enumerate(history)]
+    # prediction history section
+    elements.append(Paragraph("Prediction History", styles["Heading2"]))
+    list_items = [
+        ListItem(
+            Paragraph(f"{i+1}. {r[0]} ({r[1]*100:.2f}%)", styles["Normal"])
+        )
+        for i,r in enumerate(st.session_state.history)
+    ]
     elements.append(ListFlowable(list_items))
 
+    # build PDF
     doc.build(elements)
 
-    result_label.configure(text="PDF saved as report.pdf",text_color="cyan")
+    buffer.seek(0)
 
+    # download button appears
+    st.download_button(
+        label="Download PDF Report",
+        data=buffer,
+        file_name="report.pdf",
+        mime="application/pdf"
+    )
 
 
 # buttons
-predict_btn = ctk.CTkButton(container,text="Predict Diagnosis",command=predict,width=250,height=40)
-predict_btn.pack(pady=10)
 
-graph_btn = ctk.CTkButton(container,text="Show Graph",command=show_graph,width=250,height=40)
-graph_btn.pack(pady=10)
+# predict button
+if st.button("Predict Diagnosis"):
+    predict()
 
-pdf_btn = ctk.CTkButton(container,text="Save PDF Report",command=save_pdf,width=250,height=40)
-pdf_btn.pack(pady=10)
+# graph button
+if st.button("Show Graph"):
+    show_graph()
 
-
-# run app
-app.mainloop()
+# pdf button
+if st.button("Save PDF Report"):
+    save_pdf()
