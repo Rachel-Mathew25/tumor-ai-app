@@ -1,24 +1,35 @@
-# Tumor AI Predictor
+# Breast Cancer Prediction App
 
-A machine learning desktop app that predicts whether a tumor is benign or malignant.
+A machine learning powered web application that predicts whether a tumor is malignant or benign using Logistic Regression.
+
+Built as part of my machine learning learning journey.
+
+---
 
 ## Features
 
-- Confidence meter
-- Prediction history
-- PDF report generation
-- Clean premium UI
-- Trained ML model
+- Logistic Regression ML model
+- Confidence meter visualization
+- Confusion matrix analysis
+- Prediction history tracking
+- Downloadable PDF report
+- Modern responsive UI
+
+---
 
 ## Tech Stack
 
 - Python
 - scikit-learn
-- CustomTkinter
-- ReportLab
+- Flask
+- HTML/CSS/JavaScript
 
-## How to run
+---
+
+## How to Run Locally
+
+Clone the repository:
 
 ```bash
-pip install -r requirements.txt
-python app.py
+git clone https://github.com/YOUR-USERNAME/YOUR-REPO.git
+cd YOUR-REPO
