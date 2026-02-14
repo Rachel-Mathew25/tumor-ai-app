@@ -25,6 +25,12 @@ https://tumor-ai-app-ukefjyqhjsyqsps7h6mgye.streamlit.app/
 
 ---
 
+## App Preview
+
+![App Preview](screenshots/app_screenshot.png)
+
+---
+
 ## Problem Statement
 
 Early detection of breast cancer is critical for effective treatment. This project uses machine learning to classify tumors based on medical measurements.
