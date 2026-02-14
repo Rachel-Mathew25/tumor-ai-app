@@ -1,22 +1,24 @@
-# AI Tumor Diagnosis System
+# Tumor AI Predictor
 
-Machine learning desktop application that predicts whether a tumor is benign or malignant using medical measurements.
+A machine learning desktop app that predicts whether a tumor is benign or malignant.
 
 ## Features
-- Logistic Regression ML model
-- Modern GUI interface
-- Confidence score visualization
-- Prediction history tracking
-- Graph visualization
-- PDF report export
+
+- Confidence meter
+- Prediction history
+- PDF report generation
+- Clean premium UI
+- Trained ML model
 
 ## Tech Stack
-Python
-Scikit-learn
-CustomTkinter
-Matplotlib
-ReportLab
 
-## Run Locally
+- Python
+- scikit-learn
+- CustomTkinter
+- ReportLab
+
+## How to run
+
+```bash
 pip install -r requirements.txt
 python app.py
