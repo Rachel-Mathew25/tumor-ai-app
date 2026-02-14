@@ -27,9 +27,20 @@ Built as part of my machine learning learning journey.
 ---
 
 ## How to Run Locally
+# 1. Clone the repo
+git clone https://github.com/Rachel-Mathew25/tumor-ai-app.git
+cd tumor-ai-app
 
-Clone the repository:
+# 2. Create virtual environment
+python -m venv venv
+venv\Scripts\activate   # Windows
+
+# 3. Install dependencies
+pip install -r requirements.txt
+
+# 4. Run the app
+python app.py
 
 ```bash
-git clone https://github.com/YOUR-USERNAME/YOUR-REPO.git
+git clone https://github.com/Rachel-Mathew25/tumor-ai-app.git
 cd YOUR-REPO
